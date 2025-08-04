@@ -4,17 +4,26 @@ FROM node:20-slim AS build
 # Set the working directory inside the container
 WORKDIR /app
 
-# Copy package.json and package-lock.json (or yarn.lock) first to leverage Docker's cache
-COPY package*.json ./
+COPY --chown=node:node package*.json ./
+COPY --chown=node:node src ./src
 
-# Install dependencies
-RUN npm install
+RUN npm ci
 
-# Copy the rest of the application code
-COPY . .
+COPY --chown=node:node . .
 
-# Build the TypeScript application
-# Ensure your package.json has a "build" script that compiles TypeScript
+USER node
+
+FROM node:20-alpine3.18 AS build
+
+WORKDIR /app
+
+COPY --chown=node:node package*.json ./
+COPY --chown=node:node src ./src
+
+COPY --chown=node:node --from=development /app/node_modules ./node_modules
+
+COPY --chown=node:node . .
+
 RUN npm run build
 
 # Stage 2: Create the final, smaller runtime image
